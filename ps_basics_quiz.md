@@ -7,7 +7,7 @@
 ####Questions
 1. What command produces the aliases available?
 
-2. Using the <code>Get-Command</code> cmdlet, which command which will query an event log
+2. Using the <code>Get-Command</code> cmdlet, which command will query an event log?
 
 3. How would you write the text “Line1 Line2” in the console so that each word is on its own line?
 
