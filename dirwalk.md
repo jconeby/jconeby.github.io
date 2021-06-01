@@ -4,8 +4,8 @@
 
 ####Commands
 
-- Get-ChildItem -Path C:\ -Recurse -Force
-- [System.IO.Directory]::EnumerateFiles($path,'*.*','AllDirectories')
+- <code>Get-ChildItem -Path C:\ -Recurse -Force</code>
+- <code>[System.IO.Directory]::EnumerateFiles($path,'*.*','AllDirectories')</code>
 
 <br>
 
