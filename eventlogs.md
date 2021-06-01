@@ -138,7 +138,7 @@ You will most likely want to export your event logs to a file so that you can ac
 
 ####WevUtil Script Example
     
-    <# This script will create a copy of the Security Log on the remote machine in .evtx         format #>
+    <# This script will create a copy of the Security Log on the remote machine in .evtx format #>
     
     Invoke-Command -ComputerName "192.168.1.197" -Credential $creds -ScriptBlock {
 
@@ -156,8 +156,31 @@ You will most likely want to export your event logs to a file so that you can ac
 
     }
 
+<br>
 
+####[System.Diagnostics.Eventing.Reader.EventLogSession] Script Example
+    
+    <# This script will copy the contents of the Security Log.  Notice that in the "ExportLogAndMessages", the third parameter is an '*'.  I do not quite understand the query
+    format for this.  If you figure it out, please let me know. #>
+    
+    Invoke-Command -ComputerName "192.168.1.197" -Credential $creds -ScriptBlock {
+    $LogName = 'Security'
+    $Destination = 'C:\Temp\Security2.evtx'
+    $EventSession = New-Object System.Diagnostics.Eventing.Reader.EventLogSession
+    $EventSession.ExportLogAndMessages($LogName,'LogName','*',$Destination)
+    }
 
+<br>
+
+####Copying Files from a Remote machine
+
+Listed below is a script example of copying files from a remote machine.
+    
+    # Create a session with the remote machine
+    $session = New-PSSession -ComputerName '192.168.1.197' -Credential $creds
+    # Copy the file from the remote machine to your local machine
+    Copy-Item -Path 'C:\Temp\Security2.evtx' -Destination 'C:\Temp\Security2.evtx' -FromSession $session
+    
 <br>
 
 ###Event Log Exercise
