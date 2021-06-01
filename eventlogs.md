@@ -131,6 +131,35 @@ You will most likely want to export your event logs to a file so that you can ac
 
 <br>
 
+###Exporting Event Logs to .evtx format
+
+- When you export the event logs to .evtx format, you are able to analyze through the Windows Event Viewer App
+- The two methods for doing this are using the wevutil command or the .NET [System.Diagnostics.Eventing.Reader.EventLogSession] class.
+
+####WevUtil Script Example
+    
+    <# This script will create a copy of the Security Log on the remote machine in .evtx         format #>
+    
+    Invoke-Command -ComputerName "192.168.1.197" -Credential $creds -ScriptBlock {
+
+    $start = '05/30/2021'
+    $end = '06/01/2021'
+
+    function GetMilliseconds ($date) {
+        $ts = New-TimeSpan -Start $date -End (Get-Date)
+        [math]::Round($ts.TotalMilliseconds)
+        } # end function
+
+    $startDate = GetMilliseconds(Get-Date $start)
+    $endDate = GetMilliseconds(Get-Date $end)
+    wevtutil epl Security C:\Temp\security.evtx /q:"*[System[TimeCreated[timediff(@SystemTime) >= $endDate] and TimeCreated[timediff(@SystemTime) <= $startDate]]]"
+
+    }
+
+
+
+<br>
+
 ###Event Log Exercise
 
 <br>
