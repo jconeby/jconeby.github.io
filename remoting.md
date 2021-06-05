@@ -111,3 +111,15 @@ Set all remote hosts to trusted.  For security purposes, you will want to unset 
 Verify that all hosts are trusted
 
     Get-Item WSMan:\localhost\Client\TrustedHosts
+    
+<br>
+
+###Troubleshooting
+<br>
+You may get an error stating that " the WinRM firewall exception for public profiles limits access to remote computers within the same local subnet".  If so, you can use the code below to change your Connection Profile Network category to Private.
+    
+    # View your connection profile which includes the interface alias
+    Get-NetConnectionProfile
+    
+    # Set the connection profile network category 
+    Set-NetConnectionProfile -InterfaceAlias Ethernet -NetworkCategory Public
