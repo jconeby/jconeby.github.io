@@ -331,6 +331,46 @@ Listed below is the script to use the function.
     -StartDate '06/01/2021' -EndDate '06/07/2021' -EventList $EventList `
     -Destination 'C:\Temp\EventLog1.evtx' -LocalPath 'C:\Temp\EventLog1.evtx'
 
+<br>
+
+Below is a script to group and label the exported event logs.  This will allow you to perform Least Frequency Analysis.
+
+    function Group-EventLog 
+    {
+    [cmdletbinding()]
+    Param
+    (
+        [Parameter()]
+        $EventRecord,
+
+        [PSCustomObject]
+        $EventList
+    )
+
+    Process
+    {
+       $groupEvents = ($EventRecord | Group-Object -Property ID | Sort-Object -Property Count -Descending)
+
+       $groupEvents = foreach ($event in $groupEvents) {
+        
+            [pscustomObject]@{
+            Count = $event.Count
+            ID = $event.Name
+            Description = ($eventList | Where-Object {$_.ID -eq $event.Name}).Description
+            }
+
+          }
+    
+        return $groupEvents
+     }   
+    }
+
+    $EventRecord = Get-WinEvent -Path "C:\Temp\EventLog2.evtx"
+    $EventList = Import-Csv -Path "C:\Users\Operator\Documents\Projects\PowerShell Course\Scripts\Windows_Event_Log.csv"
+
+    Group-EventLog -EventRecord $EventRecord -EventList $EventList 
+
+<br>
 
 ###Event Log Exercise
 
