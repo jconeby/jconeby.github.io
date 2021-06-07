@@ -333,7 +333,7 @@ Listed below is the script to use the function.
 
 <br>
 
-Below is a script to group and label the exported event logs.  This will allow you to perform Least Frequency Analysis.
+Below is a script to group and label the exported event logs.  This will allow you to perform Least Frequency Analysis.  Notice how in the example below <code>Get-WinEvent</code> is used on the exported event log.  This allows you to pull the event log in as an object and perform analysis on it.
 
     function Group-EventLog 
     {
