@@ -319,7 +319,7 @@ Listed below is the script to use the function.
 
     # Change creds as needed
     $username = 'MYLAB\Administrator'
-    $password = '8Leg$OnThe$pider'
+    $password = 'password'
 
     # Create Credential Object
     [SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
