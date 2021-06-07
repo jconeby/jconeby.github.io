@@ -97,7 +97,7 @@ Indicators of compromise may be found in the event logs which was missed during 
 
 <br>
 
-You will most likely want to export your event logs to a file so that you can access them later.  The two file types most often used to accomplish this are CSV and XML.  After they have been exported to a file, you can then import those files into PowerShell as an object.
+You will most likely want to export your event logs to a file so that you can access them later.  The two file types most often used to accomplish this are CSV, XML, and EVTX.  After they have been exported to a file, you can then import those files into PowerShell as an object.
 
 <br>
 
@@ -160,8 +160,8 @@ You will most likely want to export your event logs to a file so that you can ac
 
 ####[System.Diagnostics.Eventing.Reader.EventLogSession] Script Example
     
-    <# This script will copy the contents of the Security Log.  Notice that in the "ExportLogAndMessages", the third parameter is an '*'.  I do not quite understand the query
-    format for this.  If you figure it out, please let me know. #>
+    <# This script will copy the contents of the Security Log.  Notice that in the "ExportLogAndMessages", the third parameter is an '*'. This will by
+    default just pull the entire event log #>
     
     Invoke-Command -ComputerName "192.168.1.197" -Credential $creds -ScriptBlock {
     $LogName = 'Security'
@@ -182,6 +182,155 @@ Listed below is a script example of copying files from a remote machine.
     Copy-Item -Path 'C:\Temp\Security2.evtx' -Destination 'C:\Temp\Security2.evtx' -FromSession $session
     
 <br>
+
+####Function to Export Log Files and Retrieve
+
+It is important to note that included in this function is an <code>-EventList</code> parameter.  This will allow you to just query the events listed in Windows_Event_Log.csv. An example of the csv file is listed below.
+
+|*ID*        | *Category*          | *Description*         | *Level*       | *Event_Log*  | *Event_Source*              |
+|------------|---------------------|-----------------------|---------------|--------------|---------------------------- |
+| 1102       | Clearing Event Logs | Audit Log was Cleared | Informational | Security     | Microsoft-Windows-Eventlog  |
+
+<br>
+
+Listed below is the function to export the logs to .evtx format and then import them to your local machine from the remote machine.
+  
+    function Export-EventLog
+    {
+
+     [cmdletbinding()]
+     Param
+     (
+        [Parameter(ValueFromPipeline=$true,Mandatory=$true)]
+        [string[]]
+        $ComputerName,
+
+        [Parameter(Mandatory=$true)]
+        [pscredential]
+        $Credential,
+
+        [Parameter(Mandatory=$false)]
+        [string]
+        $LogName='Security',
+
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]
+        $EventList,
+
+        [Parameter(Mandatory=$false)]
+        [string]
+        $StartDate = (Get-Date).AddDays(-1).ToString('MM/dd/yyyy'),
+
+        [Parameter(Mandatory=$false)]
+        [string]
+        $EndDate = (Get-Date).AddDays(1).ToString('MM/dd/yyyy'),
+
+        [Parameter(Mandatory=$false)]
+        [string]
+        $Destination = 'C:\Temp\EventLog.evtx',
+
+        [Parameter(Mandatory=$false)]
+        [string]
+        $LocalPath = 'C:\Temp\EventLog.evtx'
+
+    )
+
+    Begin
+    {
+        If (!$Credential) {$Credential = Get-Credential}
+    }
+
+    Process
+    {
+        Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
+
+        # Test if destination file already exists
+        if(Test-Path -Path $using:Destination)
+        {
+           return Write-Error -Message "File already exists"
+        }
+
+        # create time frame
+        function GetMilliseconds ($date) {
+            $ts = New-TimeSpan -Start $date -End (Get-Date)
+            [math]::Round($ts.TotalMilliseconds)
+            } # end function
+
+         $StartDate = GetMilliseconds(Get-Date $using:StartDate)
+         $EndDate = GetMilliseconds(Get-Date $using:EndDate)
+        
+        # If an event list is used create a query string for it
+        if($using:EventList -ne $null) 
+        {
+             # Put only the IDs of the selected logName into an array
+             $IDs = $using:EventList | Where-Object {$_.Event_Log -eq $using:LogName} | Select ID
+
+            # Create the start of the query string
+            $queryString = "("
+
+            # Loop through to add all the Event IDs to query string
+            for($i=0;$i -lt ($IDs.Length -1);$i++)
+            {
+              $nextString = $IDs[$i].ID.ToString()
+              $queryString += ("EventID=$nextString" + " or ")
+
+            } #end of loop
+
+            # Handle the last Event ID
+            [Int32]$lastNum = ($IDs.Length - 1)
+            $lastString = $IDs[$lastNum].ID.ToString()
+            $queryString += "EventID=$lastString)"
+
+            # Complete Query string
+            $query = "*[System[$queryString and TimeCreated[timediff(@SystemTime) >= $endDate] and TimeCreated[timediff(@SystemTime) <= $startDate]]]"
+
+          } # end of if
+
+          else {
+            $query = "*[System[TimeCreated[timediff(@SystemTime) >= $endDate] and TimeCreated[timediff(@SystemTime) <= $startDate]]]"
+
+          } # end of else
+
+        # Create Event Session Object
+        $EventSession = New-Object System.Diagnostics.Eventing.Reader.EventLogSession
+
+        # Export filtered event log to destination machine
+        $EventSession.ExportLogAndMessages($using:LogName,'LogName',$query,$using:Destination)
+
+
+    }#End of Script Block
+
+    # Create a session with the remote machine
+    $session = New-PSSession -ComputerName $ComputerName -Credential $creds
+
+    # Copy the file from the remote machine to your local machine
+    Copy-Item -Path $Destination -Destination $LocalPath -FromSession $session
+
+    # Remove event log from remote machine
+    Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock { Remove-Item -Path $using:Destination }
+
+    }#End of Process
+    
+    }
+    
+<br>
+
+Listed below is the script to use the function.
+
+    # Change creds as needed
+    $username = 'MYLAB\Administrator'
+    $password = '8Leg$OnThe$pider'
+
+    # Create Credential Object
+    [SecureString]$secureString = $password | ConvertTo-SecureString -AsPlainText -Force
+    [PSCredential]$creds = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $secureString
+    
+    $EventList = Import-Csv -Path "C:\Users\Operator\Documents\Projects\PowerShell Course\Scripts\Windows_Event_Log.csv"
+
+    Export-EventLog -ComputerName '192.168.1.4' -Credential $creds -LogName 'Security' `
+    -StartDate '06/01/2021' -EndDate '06/07/2021' -EventList $EventList `
+    -Destination 'C:\Temp\EventLog1.evtx' -LocalPath 'C:\Temp\EventLog1.evtx'
+
 
 ###Event Log Exercise
 
